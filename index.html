@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Review Dashboard — รพ.เลาขวัญ</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#F7F5F0;--card:#fff;--primary:#1A6B5A;--pl:#E8F3F0;--acc:#E07B3A;--acc2:#3A7BE0;--acc3:#8B5CF6;--danger:#E05555;--text:#1C1C1E;--sub:#6B7280;--border:#E5E7EB;--shadow:0 2px 8px rgba(0,0,0,.07);--r:14px;--rs:8px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun','Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+
+/* HEADER */
+.hdr{background:var(--primary);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(26,107,90,.3)}
+.hdr h1{font-size:17px;font-weight:700}.hdr p{font-size:11px;opacity:.8;margin-top:2px}
+.hdr-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* BADGES */
+.badges{background:#fff;border-bottom:1px solid var(--border);padding:8px 20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.bg{background:#D1FAE5;color:#065F46}.bb{background:#DBEAFE;color:#1E40AF}.bo{background:#FEF3C7;color:#92400E}.bp{background:#EDE9FE;color:#5B21B6}
+.mtag{background:var(--pl);color:var(--primary);border:1px solid var(--primary);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700}
+
+/* TABS */
+.tabs{background:#fff;border-bottom:2px solid var(--border);padding:0 20px;display:flex;gap:2px;overflow-x:auto}
+.tab{padding:11px 18px;font-size:13px;font-weight:700;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;white-space:nowrap}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab:hover:not(.active){color:var(--text);background:var(--bg)}
+
+/* YEAR BAR */
+.yrbar{padding:12px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border-bottom:1px solid var(--border)}
+.yrbar label{font-size:12px;color:var(--sub)}
+.yrbtn{padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);transition:all .15s;font-family:inherit}
+.yrbtn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+#yr-info{margin-left:auto;font-size:11px;color:var(--sub)}
+
+/* MAIN */
+.main{padding:18px 20px;max-width:1400px;margin:0 auto}
+.sec{margin-bottom:26px}
+.sec-title{font-size:14px;font-weight:700;color:var(--primary);margin-bottom:12px;padding-left:11px;border-left:4px solid var(--acc);display:flex;align-items:center;gap:8px}
+.num-badge{background:var(--primary);color:#fff;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.kpi{background:var(--card);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);border:1px solid var(--border);position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.kpi.gr::after{background:var(--primary)}.kpi.bl::after{background:var(--acc2)}.kpi.or::after{background:var(--acc)}.kpi.pu::after{background:var(--acc3)}.kpi.re::after{background:var(--danger)}
+.kpi-lbl{font-size:11px;color:var(--sub);margin-bottom:5px}
+.kpi-val{font-size:24px;font-weight:700;line-height:1.1}
+.kpi-val.pos{color:var(--primary)}.kpi-val.neg{color:var(--danger)}
+.kpi-sub{font-size:10px;color:var(--sub);margin-top:3px}
+
+/* CHART GRID */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cgrid.full{grid-template-columns:1fr}
+.cc{background:var(--card);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.ct{font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px}
+.cs{font-size:10px;color:var(--sub);font-weight:400;margin-left:5px}
+.cw{position:relative;height:200px}
+
+/* ALERT */
+.alert{background:#FFFBEB;border:1px solid #FCD34D;border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;font-size:12px;display:flex;gap:8px}
+
+/* TABLE */
+.twrap{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--border);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{background:var(--primary);color:#fff}
+thead th{padding:9px 10px;font-weight:600;text-align:left;white-space:nowrap}
+tbody tr:nth-child(even){background:#F9FAFB}
+tbody tr:hover{background:var(--pl)}
+tbody td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tdp{color:var(--primary);font-weight:700}.tdn{color:var(--danger);font-weight:700}
+tfoot td{padding:9px 10px;font-weight:700;background:#F0FDF9;border-top:2px solid var(--primary)}
+
+/* MODAL */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.moverlay.show{display:flex}
+.modal{background:#fff;border-radius:var(--r);padding:22px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:14px;color:var(--primary)}
+.mfooter{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.btn{padding:8px 18px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.btnp{background:var(--primary);color:#fff}.btnp:hover{background:#155a4a}
+.btnc{background:var(--bg);color:var(--sub);border:1px solid var(--border)}
+.btnr{background:#E05555;color:#fff}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.tbtn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--rs);border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--text);font-family:inherit;transition:all .15s}
+.tbtn:hover{border-color:var(--primary);color:var(--primary);background:var(--pl)}
+.tbtn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* IMPORT ZONE */
+.izone{border:2px dashed var(--border);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;background:var(--bg)}
+.izone:hover{border-color:var(--primary);background:var(--pl)}
+.izone p{color:var(--sub);font-size:12px;margin-top:6px}
+
+/* PAGE */
+.page{display:none}.page.active{display:block}
+
+@media(max-width:768px){.cgrid{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.main{padding:12px}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <span style="font-size:26px">📊</span>
+  <div>
+    <h1>Financial Review Dashboard</h1>
+    <p>โรงพยาบาลเลาขวัญ · ปีงบประมาณ <span id="hdr-yr">2569</span></p>
+  </div>
+  <div class="hdr-r">
+    <button class="tbtn primary" onclick="document.getElementById('m-import').classList.add('show')">📥 นำเข้า Excel</button>
+    <button class="tbtn" style="color:#E05555;border-color:#E05555" onclick="document.getElementById('m-reset').classList.add('show')">🔄 รีเซท</button>
+  </div>
+</div>
+
+<!-- BADGES -->
+<div class="badges">
+  <span class="badge bg">💰 รายได้ <b id="b-income">—</b></span>
+  <span class="badge bb">📋 Adj.RW <b id="b-rw">—</b></span>
+  <span class="badge bo">🏥 Admit <b id="b-admit">—</b> ราย</span>
+  <span class="badge bp">💵 เงินบำรุง <b id="b-fund">—</b></span>
+  <span class="mtag" id="b-tag">— เลือกปี —</span>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="goTab(0,this)">📊 หน้า 1 · Financial Review</div>
+  <div class="tab" onclick="goTab(1,this)">📋 ตารางสรุปรายเดือน</div>
+  <div class="tab" onclick="goTab(2,this)">📈 หน้า 2 · Productivity แยกหน่วยงาน</div>
+</div>
+
+<!-- YEAR BAR -->
+<div class="yrbar">
+  <label>📅 ปีงบประมาณ:</label>
+  <button class="yrbtn" onclick="goYear(2566,this)">ปี 2566</button>
+  <button class="yrbtn" onclick="goYear(2567,this)">ปี 2567</button>
+  <button class="yrbtn" onclick="goYear(2568,this)">ปี 2568</button>
+  <button class="yrbtn active" onclick="goYear(2569,this)">ปี 2569</button>
+  <span id="yr-info"></span>
+</div>
+
+<div class="main">
+
+<!-- PAGE 0: Financial Review -->
+<div class="page active" id="pg0">
+
+  <div class="alert"><span>⚠️</span><span id="alert-txt">กำลังโหลดข้อมูล...</span></div>
+
+  <!-- KPI -->
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">💳</span> KPI Summary</div>
+    <div class="kpi-grid" id="kpi-grid"></div>
+  </div>
+
+  <!-- 1. เงินบำรุง -->
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">1</span> สถานะเงินบำรุง</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">เงินบำรุงคงเหลือ vs รายจ่ายทั้งหมด<span class="cs">บาท รายเดือน</span></div><div class="cw"><canvas id="c-fund-debt"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ - รายจ่าย (สุทธิ)<span class="cs">บาท รายเดือน</span></div><div class="cw"><canvas id="c-net"></canvas></div></div>
+      <div class="cc"><div class="ct">เงินบำรุงคงเหลือ รายเดือน<span class="cs">บาท</span></div><div class="cw"><canvas id="c-fund"></canvas></div></div>
+      <div class="cc"><div class="ct">เงินบริจาค<span class="cs">บาท รายเดือน</span></div><div class="cw"><canvas id="c-donate"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- 2. IPD -->
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">2</span> ตัวชี้วัด IPD รายเดือน</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">Adjusted RW รายเดือน<span class="cs">หน่วย</span></div><div class="cw"><canvas id="c-rw"></canvas></div></div>
+      <div class="cc"><div class="ct">อัตราครองเตียง %<span class="cs">เส้นประ = เกณฑ์ 80%</span></div><div class="cw"><canvas id="c-bor"></canvas></div></div>
+      <div class="cc"><div class="ct">จำนวน Admit รายเดือน<span class="cs">ราย</span></div><div class="cw"><canvas id="c-admit"></canvas></div></div>
+      <div class="cc"><div class="ct">วันนอนรวมรายเดือน<span class="cs">วัน</span></div><div class="cw"><canvas id="c-beddays"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- 3. รายได้ -->
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">3</span> รายได้เรียกเก็บรายเดือน</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">รายได้ทั้งหมด รายเดือน<span class="cs">บาท</span></div><div class="cw"><canvas id="c-income"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ vs รายจ่าย รายเดือน<span class="cs">บาท</span></div><div class="cw"><canvas id="c-in-ex"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- 4. Unit Cost -->
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">4</span> Unit Cost OPD – IPD</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">Unit Cost OPD<span class="cs">บาท/visit</span></div><div class="cw"><canvas id="c-opd-cost"></canvas></div></div>
+      <div class="cc"><div class="ct">Unit Cost IPD<span class="cs">บาท/Adj.RW</span></div><div class="cw"><canvas id="c-ipd-cost"></canvas></div></div>
+    </div>
+  </div>
+
+</div><!-- /pg0 -->
+
+<!-- PAGE 1: TABLE -->
+<div class="page" id="pg1">
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">📋</span> ตารางสรุปรายการสำคัญรายเดือน</div>
+    <div class="toolbar">
+      <button class="tbtn primary" onclick="exportTable()">📤 Export Excel</button>
+    </div>
+    <div class="twrap">
+      <table id="tbl-main">
+        <thead><tr>
+          <th>รายการ</th>
+          <th>ต.ค.</th><th>พ.ย.</th><th>ธ.ค.</th><th>ม.ค.</th><th>ก.พ.</th><th>มี.ค.</th>
+          <th>เม.ย.</th><th>พ.ค.</th><th>มิ.ย.</th><th>ก.ค.</th><th>ส.ค.</th><th>ก.ย.</th>
+          <th>รวม/เฉลี่ย</th>
+        </tr></thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- PAGE 2: PRODUCTIVITY -->
+<div class="page" id="pg2">
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">💳</span> KPI Productivity — เปรียบเทียบปีงบประมาณ</div>
+    <div class="kpi-grid" id="kpi-p2"></div>
+  </div>
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">1</span> ภาพรวมรายได้แยกหน่วยงาน ปี 2568</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">รายได้รวมแยกหน่วยงาน ปี 2568<span class="cs">บาท</span></div><div class="cw" style="height:240px"><canvas id="p2-dept-bar"></canvas></div></div>
+      <div class="cc"><div class="ct">สัดส่วนรายได้แยกหน่วยงาน<span class="cs">%</span></div><div class="cw" style="height:240px"><canvas id="p2-dept-pie"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">2</span> IPD (ผู้ป่วยใน) — Productivity</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">รายได้ IP รายเดือน ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-ip-monthly"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ IP แยกสิทธิ์ ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-ip-right"></canvas></div></div>
+      <div class="cc"><div class="ct">จำนวนผู้ป่วยใน (คน) รายเดือน<span class="cs">คน</span></div><div class="cw"><canvas id="p2-ip-persons"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ IP เปรียบเทียบปี 67–69<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-ip-yr"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">3</span> OPD (ผู้ป่วยนอก) — Productivity</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">รายได้ OPD รายเดือน ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-opd-monthly"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ OPD แยกสิทธิ์ ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-opd-right"></canvas></div></div>
+      <div class="cc"><div class="ct">จำนวน Visit OPD รายเดือน<span class="cs">คน</span></div><div class="cw"><canvas id="p2-opd-persons"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ OPD เปรียบเทียบปี 67–69<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-opd-yr"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">4</span> ทันตกรรม — Productivity</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">รายได้ทันตกรรม รายเดือน ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-dent-monthly"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ทันตกรรม แยกสิทธิ์<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-dent-right"></canvas></div></div>
+      <div class="cc"><div class="ct">Visit ทันตกรรม รายเดือน<span class="cs">คน</span></div><div class="cw"><canvas id="p2-dent-persons"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ทันตกรรม เปรียบเทียบปี 67–69<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-dent-yr"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">5</span> กายภาพบำบัด — Productivity</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">รายได้กายภาพ รายเดือน ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-pt-monthly"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้กายภาพ แยกสิทธิ์<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-pt-right"></canvas></div></div>
+      <div class="cc"><div class="ct">Visit กายภาพ รายเดือน<span class="cs">คน</span></div><div class="cw"><canvas id="p2-pt-persons"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้กายภาพ เปรียบเทียบปี 67–69<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-pt-yr"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">6</span> แผนไทย — Productivity</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">รายได้แผนไทย รายเดือน ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-thai-monthly"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้แผนไทย แยกสิทธิ์<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-thai-right"></canvas></div></div>
+      <div class="cc"><div class="ct">Visit แผนไทย รายเดือน<span class="cs">คน</span></div><div class="cw"><canvas id="p2-thai-persons"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้แผนไทย เปรียบเทียบปี 67–69<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-thai-yr"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">7</span> ER & เวชฯ & สุขภาพจิต — Productivity</div>
+    <div class="cgrid">
+      <div class="cc"><div class="ct">รายได้ ER รายเดือน ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-er-monthly"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ เวชฯ รายเดือน ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-med-monthly"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ สุขภาพจิต รายเดือน ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-mental-monthly"></canvas></div></div>
+      <div class="cc"><div class="ct">รายได้ LAB รพสต. รายเดือน ปี 2568<span class="cs">บาท</span></div><div class="cw"><canvas id="p2-lab-monthly"></canvas></div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-title"><span class="num-badge">8</span> ตารางสรุป Productivity แยกหน่วยงาน</div>
+    <div class="toolbar">
+      <button class="tbtn primary" onclick="exportProdTable()">📤 Export Excel</button>
+    </div>
+    <div class="twrap">
+      <table id="tbl-prod">
+        <thead><tr>
+          <th>หน่วยงาน</th>
+          <th>รายได้ปี 2567</th><th>รายได้ปี 2568</th><th>รายได้ปี 2569*</th>
+          <th>โต 67→68</th><th>โต 68→69*</th>
+          <th>UC (ปี68)</th><th>ข้าราชการ (ปี68)</th><th>ปกส. (ปี68)</th><th>อื่นๆ (ปี68)</th>
+        </tr></thead>
+        <tbody id="tbl-prod-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- MODAL: Reset -->
+<div class="moverlay" id="m-reset">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <div style="font-size:36px;margin-bottom:10px">⚠️</div>
+    <h3 style="color:#E05555">ยืนยันรีเซทข้อมูล</h3>
+    <p style="font-size:12px;color:var(--sub);margin:10px 0 18px">จะล้างข้อมูลที่เพิ่มเติมออกทั้งหมด และกลับใช้ข้อมูลจาก Excel ต้นฉบับ</p>
+    <div class="mfooter" style="justify-content:center">
+      <button class="btn btnc" onclick="document.getElementById('m-reset').classList.remove('show')">ยกเลิก</button>
+      <button class="btn btnr" onclick="doReset()">🔄 รีเซทเลย</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Import -->
+<div class="moverlay" id="m-import">
+  <div class="modal">
+    <h3>📥 นำเข้าข้อมูลเพิ่มเติมจาก Excel</h3>
+    <p style="font-size:12px;color:var(--sub);margin-bottom:10px">ชื่อคอลัมน์ที่รองรับ: year(CE), month_serial หรือ ปี, เดือน(0-11)</p>
+    <div style="background:#F3F4F6;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700">
+        <input type="checkbox" id="chk-overwrite" checked style="width:15px;height:15px;accent-color:var(--primary)">
+        ทับข้อมูลเดิม (ปี+เดือนซ้ำ)
+      </label>
+    </div>
+    <div class="izone" onclick="document.getElementById('f-import').click()">
+      <div style="font-size:32px">📂</div>
+      <p>คลิกเพื่อเลือกไฟล์ .xlsx</p>
+    </div>
+    <input type="file" id="f-import" accept=".xlsx,.xls" style="display:none" onchange="doImport(event)">
+    <div id="import-msg" style="margin-top:10px;font-size:12px;min-height:18px;color:var(--primary)"></div>
+    <div class="mfooter"><button class="btn btnc" onclick="document.getElementById('m-import').classList.remove('show')">ปิด</button></div>
+  </div>
+</div>
+
+<script>
+// ============ DATA (ฝังจาก Excel จริง) ============
+const BASE = {
+  2566: [{"m":0,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":349,"bedDays":915,"bor":55.69,"rw":181.95},{"m":1,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":308,"bedDays":813,"bor":51.13,"rw":171.81},{"m":2,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":290,"bedDays":850,"bor":51.73,"rw":171.01},{"m":3,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":338,"bedDays":841,"bor":51.19,"rw":177.05},{"m":4,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":310,"bedDays":765,"bor":51.55,"rw":166.04},{"m":5,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":380,"bedDays":927,"bor":56.42,"rw":221.09},{"m":6,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":329,"bedDays":886,"bor":55.72,"rw":188.23},{"m":7,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":359,"bedDays":947,"bor":57.64,"rw":201.17},{"m":8,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":363,"bedDays":944,"bor":59.37,"rw":192.63},{"m":9,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":343,"bedDays":926,"bor":56.36,"rw":191.06},{"m":10,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":339,"bedDays":1023,"bor":62.26,"rw":196.18},{"m":11,"income":0,"expense":0,"fund":0,"donate":0,"opdCost":0,"ipdCost":0,"admit":422,"bedDays":1143,"bor":71.89,"rw":221.87}],
+  2567: [{"m":0,"income":6391019.19,"expense":5870753.2,"fund":27470761.99,"donate":2610,"opdCost":0,"ipdCost":0,"admit":431,"bedDays":1211,"bor":72.34,"rw":255.94},{"m":1,"income":3604893.36,"expense":5584749.31,"fund":25490906.04,"donate":2199,"opdCost":0,"ipdCost":0,"admit":423,"bedDays":1173,"bor":72.41,"rw":243.96},{"m":2,"income":7144195.88,"expense":5344995.13,"fund":27290106.79,"donate":122000,"opdCost":0,"ipdCost":0,"admit":386,"bedDays":1106,"bor":66.07,"rw":222.36},{"m":3,"income":2844195.74,"expense":5230158.19,"fund":24904144.34,"donate":19301,"opdCost":0,"ipdCost":0,"admit":421,"bedDays":1104,"bor":65.95,"rw":233.77},{"m":4,"income":23551582.85,"expense":7580042.15,"fund":40875685.04,"donate":3155,"opdCost":0,"ipdCost":0,"admit":401,"bedDays":1032,"bor":68.25,"rw":222.78},{"m":5,"income":9488876.47,"expense":5663459.51,"fund":44701102.0,"donate":3000,"opdCost":0,"ipdCost":0,"admit":426,"bedDays":1282,"bor":76.58,"rw":282.13},{"m":6,"income":2289553.35,"expense":8676581.32,"fund":38314074.03,"donate":3500,"opdCost":0,"ipdCost":0,"admit":376,"bedDays":992,"bor":61.23,"rw":229.7},{"m":7,"income":6438024.06,"expense":7724760.04,"fund":37027338.05,"donate":3000,"opdCost":0,"ipdCost":0,"admit":350,"bedDays":1157,"bor":69.12,"rw":210.32},{"m":8,"income":3540223.92,"expense":8958164.87,"fund":31609397.1,"donate":9500,"opdCost":0,"ipdCost":0,"admit":417,"bedDays":1166,"bor":71.98,"rw":278.76},{"m":9,"income":23359955.48,"expense":6787377.71,"fund":48181974.87,"donate":7010,"opdCost":0,"ipdCost":0,"admit":485,"bedDays":1259,"bor":75.21,"rw":277.46},{"m":10,"income":3560756.33,"expense":9693183.63,"fund":42049547.57,"donate":0,"opdCost":0,"ipdCost":0,"admit":493,"bedDays":1252,"bor":74.79,"rw":282.15},{"m":11,"income":5246549.69,"expense":9285918.02,"fund":38010179.24,"donate":3000,"opdCost":888.43,"ipdCost":11609.9,"admit":454,"bedDays":1311,"bor":80.93,"rw":297.99}],
+  2568: [{"m":0,"income":2687718.68,"expense":7665270.53,"fund":33032627.39,"donate":9500,"opdCost":0,"ipdCost":0,"admit":413,"bedDays":1139,"bor":66.8,"rw":259.13},{"m":1,"income":17635914.79,"expense":7461601.74,"fund":43207140.44,"donate":3000,"opdCost":0,"ipdCost":0,"admit":335,"bedDays":919,"bor":55.7,"rw":204.29},{"m":2,"income":8456594.64,"expense":9066158.29,"fund":42597576.79,"donate":14500,"opdCost":0,"ipdCost":0,"admit":442,"bedDays":1130,"bor":66.28,"rw":304.68},{"m":3,"income":2924922.2,"expense":6827961.86,"fund":38694537.13,"donate":55099,"opdCost":0,"ipdCost":0,"admit":411,"bedDays":1066,"bor":62.52,"rw":256.16},{"m":4,"income":21006853.6,"expense":7523986.41,"fund":52177404.32,"donate":11000,"opdCost":0,"ipdCost":0,"admit":373,"bedDays":991,"bor":64.35,"rw":233.82},{"m":5,"income":4376496.84,"expense":7775217.46,"fund":48778683.7,"donate":5000,"opdCost":0,"ipdCost":0,"admit":528,"bedDays":1219,"bor":71.5,"rw":336.97},{"m":6,"income":3943189.42,"expense":7750679.65,"fund":44971193.47,"donate":9500,"opdCost":0,"ipdCost":0,"admit":438,"bedDays":1000,"bor":60.61,"rw":254.79},{"m":7,"income":3790166.61,"expense":8835092.03,"fund":39926268.05,"donate":5610,"opdCost":0,"ipdCost":0,"admit":427,"bedDays":1048,"bor":61.47,"rw":254.26},{"m":8,"income":9284982.8,"expense":8600254.46,"fund":40610996.39,"donate":3000,"opdCost":0,"ipdCost":0,"admit":434,"bedDays":1150,"bor":69.7,"rw":286.26},{"m":9,"income":3015187.54,"expense":6094623.09,"fund":37531560.84,"donate":2000,"opdCost":0,"ipdCost":0,"admit":391,"bedDays":1131,"bor":66.33,"rw":236.07},{"m":10,"income":2526974.22,"expense":6603889.99,"fund":33454645.07,"donate":1019,"opdCost":0,"ipdCost":0,"admit":409,"bedDays":1080,"bor":63.34,"rw":249.93},{"m":11,"income":2270888.36,"expense":11836067.99,"fund":23889465.44,"donate":10403,"opdCost":919.29,"ipdCost":11962.82,"admit":410,"bedDays":1056,"bor":64.0,"rw":248.01}],
+  2569: [{"m":0,"income":10411799.41,"expense":5063799.46,"fund":29237465.39,"donate":15713.07,"opdCost":0,"ipdCost":0,"admit":364,"bedDays":1057,"bor":79.29,"rw":205.54},{"m":1,"income":3182503.36,"expense":5581529.34,"fund":26838439.41,"donate":36429.55,"opdCost":0,"ipdCost":0,"admit":379,"bedDays":1051,"bor":81.47,"rw":221.3},{"m":2,"income":5217118.36,"expense":8758442.74,"fund":23297115.03,"donate":19762.12,"opdCost":0,"ipdCost":0,"admit":422,"bedDays":1140,"bor":85.52,"rw":292.81},{"m":3,"income":3205151.95,"expense":4622992.63,"fund":21879274.35,"donate":6535.48,"opdCost":0,"ipdCost":0,"admit":394,"bedDays":1138,"bor":85.37,"rw":249.57},{"m":4,"income":29578684.96,"expense":7728917.38,"fund":43729041.93,"donate":12632.88,"opdCost":0,"ipdCost":0,"admit":333,"bedDays":946,"bor":78.57,"rw":205.92},{"m":5,"income":24437336.98,"expense":8275547.18,"fund":59890831.73,"donate":5782.23,"opdCost":874.25,"ipdCost":11944.21,"admit":414,"bedDays":1258,"bor":94.37,"rw":290.5},{"m":6,"income":18618529.17,"expense":7729038.36,"fund":70780322.54,"donate":1823.04,"opdCost":0,"ipdCost":0,"admit":395,"bedDays":1167,"bor":90.47,"rw":241.28},{"m":7,"income":4496846.22,"expense":4716077.08,"fund":70561091.68,"donate":7129.55,"opdCost":0,"ipdCost":0,"admit":407,"bedDays":1189,"bor":89.2,"rw":251.02}]
+};
+
+const MONTHS = ['ต.ค.','พ.ย.','ธ.ค.','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.'];
+const CLR = {gr:'#1A6B5A',bl:'#3A7BE0',or:'#E07B3A',pu:'#8B5CF6',re:'#E05555',tl:'#0D9488',pk:'#EC4899',am:'#F59E0B'};
+
+let activeYear = 2569;
+let userData = JSON.parse(localStorage.getItem('lkw_extra') || '{}');
+const charts = {};
+
+function getData(yr) {
+  const base = JSON.parse(JSON.stringify(BASE[yr] || []));
+  const extra = userData[yr] || [];
+  extra.forEach(ex => {
+    const idx = base.findIndex(r => r.m === ex.m);
+    if (idx >= 0) Object.assign(base[idx], ex);
+    else { base.push(ex); base.sort((a,b) => a.m-b.m); }
+  });
+  return base;
+}
+
+function fmtM(v) {
+  if (!v) return '—';
+  if (Math.abs(v) >= 1e6) return (v/1e6).toFixed(2)+'M';
+  if (Math.abs(v) >= 1e3) return (v/1e3).toFixed(1)+'K';
+  return v.toFixed(0);
+}
+function fmtN(v) { return v ? v.toLocaleString('th-TH',{maximumFractionDigits:2}) : '—'; }
+
+function mkChart(id, type, labels, datasets, extra={}) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type, data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:datasets.length>1, labels:{font:{size:10},boxWidth:10,padding:10}},
+        tooltip:{callbacks:{label:c => {
+          const v = c.parsed.y;
+          return ` ${c.dataset.label||''}: ${typeof v==='number' ? v.toLocaleString('th-TH',{maximumFractionDigits:2}) : v}`;
+        }}}
+      },
+      scales: (type==='bar'||type==='line') ? {
+        x:{grid:{display:false},ticks:{font:{size:10}}},
+        y:{grid:{color:'#F3F4F6'},ticks:{font:{size:10},callback:v=>fmtM(v)}},
+        ...extra.scales
+      }:{},
+      ...extra
+    }
+  });
+}
+function lds(lbl,data,c,dash=false){return{label:lbl,data,borderColor:c,backgroundColor:c+'22',borderWidth:2,pointRadius:3,pointHoverRadius:5,tension:.4,fill:false,borderDash:dash?[5,4]:[]}}
+function bds(lbl,data,c){return{label:lbl,data,backgroundColor:c+'BB',borderColor:c,borderWidth:1,borderRadius:5}}
+
+// ============ RENDER ============
+function renderBadges(d) {
+  if (!d.length) return;
+  const last = d[d.length-1];
+  document.getElementById('hdr-yr').textContent = activeYear;
+  document.getElementById('b-income').textContent = fmtM(last.income);
+  document.getElementById('b-rw').textContent = last.rw.toFixed(2);
+  document.getElementById('b-admit').textContent = last.admit.toLocaleString('th-TH');
+  document.getElementById('b-fund').textContent = fmtM(last.fund);
+  const net = last.income - last.expense;
+  document.getElementById('b-tag').textContent = MONTHS[last.m]+' '+(net>=0?'รายได้ > รายจ่าย ✅':'รายจ่าย > รายได้ ⚠️');
+  const cnt = d.length;
+  document.getElementById('yr-info').textContent = `ข้อมูล ${cnt} เดือน (${MONTHS[d[0].m]} – ${MONTHS[d[cnt-1].m]})`;
+  const lastFund = last.fund;
+  document.getElementById('alert-txt').textContent =
+    `ปี ${activeYear}: เงินบำรุงคงเหลือล่าสุด ${fmtM(lastFund)} บาท (${MONTHS[last.m]}) · Admit รวม ${d.reduce((s,r)=>s+r.admit,0).toLocaleString('th-TH')} ราย · Adj.RW รวม ${d.reduce((s,r)=>s+r.rw,0).toFixed(2)} หน่วย`;
+}
+
+function renderKPI(d) {
+  if (!d.length) {
+    document.getElementById('kpi-grid').innerHTML = '<div style="color:var(--sub);font-size:13px;padding:20px;grid-column:1/-1">ยังไม่มีข้อมูลปีนี้ค่ะ</div>';
+    return;
+  }
+  const last = d[d.length-1];
+  // รวมทั้งปี
+  const totalIncome  = d.reduce((s,r)=>s+r.income,0);
+  const totalExpense = d.reduce((s,r)=>s+r.expense,0);
+  const totalNet     = totalIncome - totalExpense;
+  const totalRW      = d.reduce((s,r)=>s+r.rw,0);
+  const totalAdmit   = d.reduce((s,r)=>s+r.admit,0);
+  const avgAdmit     = Math.round(totalAdmit/d.length);
+  const avgBor       = (d.reduce((s,r)=>s+r.bor,0)/d.length).toFixed(1);
+  const totalDonate  = d.reduce((s,r)=>s+r.donate,0);
+  const costOPD      = d.filter(r=>r.opdCost>0).slice(-1)[0]?.opdCost || 0;
+  const costIPD      = d.filter(r=>r.ipdCost>0).slice(-1)[0]?.ipdCost || 0;
+  const nMon = d.length;
+  const sub  = `รวม ${nMon} เดือน ปี ${activeYear}`;
+
+  const RW_TARGET = 3436.83;
+  // ดึง Sum Adj.RW ปี 2569 เสมอ (ไม่ขึ้นกับปีที่เลือก)
+  const d69 = getData(2569);
+  const rw69 = d69.reduce((s,r)=>s+r.rw, 0);
+  const rwPct = rw69 > 0 ? Math.min((rw69/RW_TARGET)*100, 100) : 0;
+  const rwRemain = Math.max(RW_TARGET - rw69, 0);
+  const rwCls = rwPct >= 100 ? 'gr' : rwPct >= 75 ? 'or' : 're';
+  const rwColor = rwPct >= 100 ? '#1A6B5A' : rwPct >= 75 ? '#E07B3A' : '#E05555';
+
+  const rwCard = `
+    <div class="kpi" style="border-bottom:3px solid ${rwColor};grid-column:1/-1;background:linear-gradient(135deg,#fff 60%,${rwColor}11)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="kpi-lbl">🎯 Sum Adj.RW ปี 2569 vs เป้าหมาย</div>
+          <div class="kpi-val" style="color:${rwColor};font-size:28px">${rw69.toFixed(2)}</div>
+          <div class="kpi-sub">เป้า ${RW_TARGET.toLocaleString('th-TH')} หน่วย · ข้อมูล ${d69.length} เดือน (${d69.length?MONTHS[d69[0].m]:''}–${d69.length?MONTHS[d69[d69.length-1].m]:''})</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:32px;font-weight:800;color:${rwColor}">${rwPct.toFixed(1)}%</div>
+          <div style="font-size:11px;color:var(--sub)">คงเหลือ ${rwRemain.toFixed(2)} หน่วย</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;background:#F3F4F6;border-radius:99px;height:12px;overflow:hidden">
+        <div style="height:100%;width:${rwPct.toFixed(1)}%;background:${rwColor};border-radius:99px;transition:width .6s ease;position:relative">
+          <div style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:9px;color:#fff;font-weight:700;white-space:nowrap">${rwPct>=15?rwPct.toFixed(1)+'%':''}</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--sub)">
+        <span>0</span><span style="color:${rwColor};font-weight:700">${rw69.toFixed(0)}</span><span>${RW_TARGET.toLocaleString('th-TH')}</span>
+      </div>
+    </div>`;
+
+  const cards = [
+    {lbl:'รายได้รวมทั้งปี',        val:fmtM(totalIncome),  sub:sub,            cls:'gr'},
+    {lbl:'รายจ่ายรวมทั้งปี',       val:fmtM(totalExpense), sub:sub,            cls:'or'},
+    {lbl:'รายได้ - รายจ่าย สุทธิ', val:(totalNet>=0?'+':'')+fmtM(totalNet),
+                                     sub:totalNet>=0?'✅ บวก':'⚠️ ลบ',          cls:totalNet>=0?'gr':'re', pos:totalNet>=0},
+    {lbl:'เงินบำรุงคงเหลือ (ล่าสุด)',val:fmtM(last.fund),  sub:MONTHS[last.m]+' '+activeYear, cls:'bl'},
+    {lbl:'เงินบริจาครวมทั้งปี',    val:fmtM(totalDonate),  sub:sub,            cls:'pu'},
+    {lbl:'Sum Adj.RW รวมทั้งปี',   val:totalRW.toFixed(2), sub:'หน่วย · '+sub, cls:'bl'},
+    {lbl:'Admit รวมทั้งปี',        val:totalAdmit.toLocaleString('th-TH'), sub:'ราย · '+sub, cls:'or'},
+    {lbl:'Admit เฉลี่ย/เดือน',     val:avgAdmit.toLocaleString('th-TH'),   sub:'ราย/เดือน', cls:'or'},
+    {lbl:'BOR เฉลี่ยทั้งปี',       val:avgBor+'%',         sub:'อัตราครองเตียง', cls:+avgBor>=80?'re':+avgBor>=70?'or':'gr'},
+    {lbl:'Unit Cost OPD',           val:costOPD?costOPD.toLocaleString('th-TH',{maximumFractionDigits:2}):'—', sub:'บาท/visit', cls:'pu'},
+    {lbl:'Unit Cost IPD',           val:costIPD?costIPD.toLocaleString('th-TH',{maximumFractionDigits:2}):'—', sub:'บาท/Adj.RW', cls:'pu'},
+  ];
+  document.getElementById('kpi-grid').innerHTML =
+    rwCard +
+    cards.map(c=>`
+    <div class="kpi ${c.cls}">
+      <div class="kpi-lbl">${c.lbl}</div>
+      <div class="kpi-val ${c.pos===true?'pos':c.pos===false?'neg':''}">${c.val}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+function renderCharts(d) {
+  if (!d.length) return;
+  const mn = d.map(r=>MONTHS[r.m]);
+
+  // 1. เงินบำรุง
+  mkChart('c-fund-debt','line',mn,[
+    lds('เงินบำรุงคงเหลือ',d.map(r=>r.fund),CLR.bl),
+    lds('รายจ่ายทั้งหมด',d.map(r=>r.expense),CLR.re),
+  ]);
+  mkChart('c-net','bar',mn,[bds('รายได้-รายจ่าย',d.map(r=>r.income-r.expense),CLR.gr)]);
+  mkChart('c-fund','line',mn,[lds('เงินบำรุง',d.map(r=>r.fund),CLR.bl)]);
+  mkChart('c-donate','bar',mn,[bds('เงินบริจาค',d.map(r=>r.donate),CLR.pu)]);
+
+  // 2. IPD
+  mkChart('c-rw','bar',mn,[bds('Adj.RW',d.map(r=>r.rw),CLR.tl)]);
+
+  // BOR with 80% line
+  if (charts['c-bor']) charts['c-bor'].destroy();
+  const bc = document.getElementById('c-bor');
+  if (bc) charts['c-bor'] = new Chart(bc, {
+    type:'line',
+    data:{labels:mn,datasets:[
+      {label:'BOR %',data:d.map(r=>r.bor),borderColor:CLR.tl,backgroundColor:CLR.tl+'22',borderWidth:2,pointRadius:3,tension:.4,fill:true},
+      {label:'เกณฑ์ 80%',data:d.map(()=>80),borderColor:CLR.am,borderWidth:2,borderDash:[5,4],pointRadius:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:10,padding:10}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{min:0,max:120,grid:{color:'#F3F4F6'},ticks:{font:{size:10},callback:v=>v+'%'}}}
+    }
+  });
+
+  mkChart('c-admit','bar',mn,[bds('Admit',d.map(r=>r.admit),CLR.or)]);
+  mkChart('c-beddays','bar',mn,[bds('วันนอนรวม',d.map(r=>r.bedDays),CLR.bl)]);
+
+  // 3. รายได้
+  mkChart('c-income','bar',mn,[bds('รายได้ทั้งหมด',d.map(r=>r.income),CLR.bl)]);
+  mkChart('c-in-ex','line',mn,[
+    lds('รายได้',d.map(r=>r.income),CLR.gr),
+    lds('รายจ่าย',d.map(r=>r.expense),CLR.re),
+  ]);
+
+  // 4. Unit Cost (only rows with data)
+  const costD = d.filter(r=>r.opdCost>0||r.ipdCost>0);
+  if (costD.length) {
+    mkChart('c-opd-cost','line',costD.map(r=>MONTHS[r.m]),[lds('Unit Cost OPD',costD.map(r=>r.opdCost),CLR.pu)]);
+    mkChart('c-ipd-cost','line',costD.map(r=>MONTHS[r.m]),[lds('Unit Cost IPD',costD.map(r=>r.ipdCost),CLR.or)]);
+  }
+}
+
+function renderTable(d) {
+  const map = {};
+  d.forEach(r => map[r.m]=r);
+  const rows = [
+    {lbl:'รายได้ทั้งหมด (บาท)',key:'income',fmt:'money'},
+    {lbl:'รายจ่ายทั้งหมด (บาท)',key:'expense',fmt:'money'},
+    {lbl:'รายได้-รายจ่าย สุทธิ (บาท)',key:'_net',fmt:'net'},
+    {lbl:'เงินบำรุงคงเหลือ (บาท)',key:'fund',fmt:'money'},
+    {lbl:'เงินบริจาค (บาท)',key:'donate',fmt:'money'},
+    {lbl:'จำนวน Admit (ราย)',key:'admit',fmt:'num'},
+    {lbl:'วันนอนรวม (วัน)',key:'bedDays',fmt:'num'},
+    {lbl:'BOR % ครองเตียง',key:'bor',fmt:'pct'},
+    {lbl:'Adj.RW',key:'rw',fmt:'dec'},
+    {lbl:'Unit Cost OPD (บาท/visit)',key:'opdCost',fmt:'dec'},
+    {lbl:'Unit Cost IPD (บาท/Adj.RW)',key:'ipdCost',fmt:'dec'},
+  ];
+  document.getElementById('tbl-body').innerHTML = rows.map(row => {
+    let total = 0, cnt = 0;
+    const cells = Array.from({length:12},(_,mi)=>{
+      const r = map[mi];
+      let v = r ? (row.key==='_net' ? r.income-r.expense : r[row.key]) : null;
+      if (v!=null) { total+=v; cnt++; }
+      let txt = v!=null ? v.toLocaleString('th-TH',{maximumFractionDigits:2}) : '—';
+      const cls = row.key==='_net' && v!=null ? (v>=0?' tdp':' tdn') : '';
+      return `<td class="num${cls}">${txt}</td>`;
+    });
+    let sumTxt = '—';
+    if (cnt>0) {
+      const s = row.fmt==='pct'||row.fmt==='dec' ? total/cnt : total;
+      sumTxt = s.toLocaleString('th-TH',{maximumFractionDigits:2});
+      if (row.fmt==='pct') sumTxt += '%';
+    }
+    return `<tr><td>${row.lbl}</td>${cells.join('')}<td class="num" style="font-weight:700">${sumTxt}</td></tr>`;
+  }).join('');
+}
+
+function renderAll() {
+  const d = getData(activeYear);
+  renderBadges(d);
+  renderKPI(d);
+  renderCharts(d);
+  renderTable(d);
+}
+
+// ============ TAB / YEAR ============
+let activeTab = 0;
+function goTab(i, el) {
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',i===j));
+  document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',i===j));
+  activeTab = i;
+  if (i===2 && !p2Ready) renderP2();
+  if (i===2 && p2Ready) { p2Ready = false; renderP2(); }
+}
+function goYear(yr, btn) {
+  activeYear = yr;
+  document.querySelectorAll('.yrbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+
+// ============ RESET ============
+function doReset() {
+  userData = {};
+  localStorage.removeItem('lkw_extra');
+  document.getElementById('m-reset').classList.remove('show');
+  renderAll();
+}
+
+// ============ IMPORT ============
+function doImport(evt) {
+  const file = evt.target.files[0]; if (!file) return;
+  const ow = document.getElementById('chk-overwrite').checked;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result,{type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws,{defval:0});
+      let ok=0, skip=0, lastYr=null;
+      rows.forEach(r => {
+        const yr = parseInt(r['ปี']||r['year']||r['Year']||0);
+        const mi = parseInt(r['เดือน']||r['month']||r['Month']||0);
+        if (!yr||isNaN(mi)||mi<0||mi>11) return;
+        const row = {
+          m:mi,
+          income:+r['รายได้ทั้งหมด']||+r['income']||0,
+          expense:+r['รายจ่ายทั้งหมด']||+r['expense']||0,
+          fund:+r['เงินบำรุงคงเหลือ']||+r['fund']||0,
+          donate:+r['เงินบริจาค']||+r['donate']||0,
+          opdCost:+r['Unit Cost OPD']||+r['opdCost']||0,
+          ipdCost:+r['Unit Cost IPD']||+r['ipdCost']||0,
+          admit:+r['จำนวนAdmit']||+r['admit']||0,
+          bedDays:+r['วันนอนรวม']||+r['bedDays']||0,
+          bor:+r['อัตราครองเตียง']||+r['bor']||0,
+          rw:+r['Total AdjRW']||+r['Adj.RW']||+r['rw']||0,
+        };
+        if (!userData[yr]) userData[yr]=[];
+        const idx = userData[yr].findIndex(x=>x.m===mi);
+        if (idx>=0) { if(ow){userData[yr][idx]=row;ok++;lastYr=yr;}else skip++; }
+        else { userData[yr].push(row); userData[yr].sort((a,b)=>a.m-b.m); ok++; lastYr=yr; }
+      });
+      localStorage.setItem('lkw_extra',JSON.stringify(userData));
+      if (lastYr) {
+        activeYear = lastYr;
+        document.querySelectorAll('.yrbtn').forEach(b=>{
+          const yr = parseInt(b.textContent.replace('ปี ',''));
+          b.classList.toggle('active', yr===lastYr);
+        });
+      }
+      document.getElementById('import-msg').textContent = `✅ นำเข้า ${ok} แถว${skip?` · ข้ามซ้ำ ${skip} แถว`:''}`;
+      renderAll();
+      evt.target.value='';
+    } catch(err) {
+      document.getElementById('import-msg').textContent = '❌ Error: '+err.message;
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function exportTable() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(document.getElementById('tbl-main'));
+  XLSX.utils.book_append_sheet(wb,ws,'สรุปรายเดือน');
+  XLSX.writeFile(wb,`Financial_Summary_${activeYear}.xlsx`);
+}
+
+
+// ===== PAGE 2 DATA =====
+const OP_MONTHLY = {"2567": {"3": {"ER": {"income": 695751.56, "persons": 1895.0, "other_inc": 4595.75, "cscd_inc": 91723.5, "uc_inc": 577630.68, "sso_inc": 21801.63}}, "5": {"เวชฯ": {"income": 1950.0, "persons": 39.0, "other_inc": 1950.0}}, "6": {"เวชฯ": {"income": 6520.0, "persons": 131.0, "other_inc": 6520.0}}, "7": {"เวชฯ": {"income": 440.0, "persons": 6.0, "other_inc": 440.0}}, "8": {"เวชฯ": {"income": 100.0, "persons": 2.0, "other_inc": 100.0}}, "9": {"เวชฯ": {"income": 100.0, "persons": 5.0, "other_inc": 100.0}}, "10": {"แผนไทย": {"income": 54398.68, "persons": 788.0, "other_inc": 54398.68}, "เวชฯ": {"income": 5330.0, "persons": 60.0, "other_inc": 5330.0}, "สุขภาพจิต": {"income": 7282.88, "persons": 88.0, "other_inc": 7282.88}}, "11": {"เวชฯ": {"income": 30126.0, "persons": 496.0, "other_inc": 30126.0}, "สุขภาพจิต": {"income": 13448.53, "persons": 164.0, "other_inc": 13448.53}}}, "2568": {"0": {"OPD": {"income": 1246956.05, "persons": 2977.0, "other_inc": 66208.33, "cscd_inc": 129390.75, "uc_inc": 1030696.09, "sso_inc": 20660.88}, "ER": {"income": 1025624.03, "persons": 2982.0, "other_inc": 332848.43, "cscd_inc": 51146.15, "uc_inc": 625800.55, "sso_inc": 15828.9}, "กายภาพ": {"income": 766145.13, "persons": 690.0, "other_inc": 105150.0, "cscd_inc": 491935.5, "uc_inc": 164394.27, "sso_inc": 4665.36}, "ทันตกรรม": {"income": 631223.53, "persons": 984.0, "other_inc": 130827.26, "cscd_inc": 176321.0, "uc_inc": 313430.27, "sso_inc": 10645.0}, "แผนไทย": {"income": 225919.59, "persons": 1270.0, "other_inc": 67517.15, "cscd_inc": 106995.0, "uc_inc": 47741.8, "sso_inc": 3665.64}, "เวชฯ": {"income": 181574.29, "persons": 1152.0, "other_inc": 144259.3, "cscd_inc": 1101.0, "uc_inc": 35214.27, "sso_inc": 999.72}, "สุขภาพจิต": {"income": 94133.47, "persons": 380.0, "other_inc": 19572.64, "cscd_inc": 3110.0, "uc_inc": 71117.59, "sso_inc": 333.24}}, "1": {"OPD": {"income": 1189916.23, "persons": 2724.0, "other_inc": 69606.45, "cscd_inc": 179056.1, "uc_inc": 917093.78, "sso_inc": 24159.9}, "ER": {"income": 792102.68, "persons": 2287.0, "other_inc": 181756.38, "cscd_inc": 57877.55, "uc_inc": 532700.83, "sso_inc": 19767.92}, "กายภาพ": {"income": 591374.67, "persons": 607.0, "other_inc": 73230.0, "cscd_inc": 368380.0, "uc_inc": 145432.55, "sso_inc": 4332.12}, "ทันตกรรม": {"income": 519133.08, "persons": 758.0, "other_inc": 108703.39, "cscd_inc": 160898.0, "uc_inc": 232963.45, "sso_inc": 16568.24}, "แผนไทย": {"income": 215334.04, "persons": 1224.0, "other_inc": 62772.38, "cscd_inc": 111218.5, "uc_inc": 37177.66, "sso_inc": 4165.5}, "เวชฯ": {"income": 163785.77, "persons": 1143.0, "cscd_inc": 2147.0, "uc_inc": 41734.86, "other_inc": 119903.91}, "สุขภาพจิต": {"income": 83188.17, "persons": 263.0, "other_inc": 7767.68, "cscd_inc": 3052.0, "uc_inc": 71868.63, "sso_inc": 499.86}}, "2": {"OPD": {"income": 1001246.71, "persons": 2365.0, "other_inc": 48152.85, "cscd_inc": 130932.95, "uc_inc": 801239.51, "sso_inc": 20921.4}, "ER": {"income": 871248.88, "persons": 2354.0, "other_inc": 204229.64, "cscd_inc": 59547.25, "uc_inc": 593634.41, "sso_inc": 13837.58}, "กายภาพ": {"income": 560043.93, "persons": 548.0, "other_inc": 70530.0, "cscd_inc": 360291.0, "uc_inc": 125557.29, "sso_inc": 3665.64}, "ทันตกรรม": {"income": 429882.2, "persons": 660.0, "other_inc": 94827.26, "cscd_inc": 111610.0, "uc_inc": 192763.32, "sso_inc": 30681.62}, "แผนไทย": {"income": 186738.34, "persons": 1117.0, "other_inc": 54219.04, "cscd_inc": 85258.25, "uc_inc": 43428.79, "sso_inc": 3832.26}, "เวชฯ": {"income": 161368.49, "persons": 836.0, "cscd_inc": 10509.75, "uc_inc": 49465.98, "sso_inc": 333.24, "other_inc": 101059.52}, "สุขภาพจิต": {"income": 84603.33, "persons": 367.0, "other_inc": 17107.88, "cscd_inc": 1105.0, "uc_inc": 66223.83, "sso_inc": 166.62}}, "3": {"OPD": {"income": 1229803.89, "persons": 2895.0, "other_inc": 84614.85, "cscd_inc": 132738.4, "uc_inc": 980710.47, "sso_inc": 31740.17}, "ER": {"income": 240553.07, "persons": 647.0, "other_inc": 240233.07, "sso_inc": 320.0}, "กายภาพ": {"income": 568278.08, "persons": 590.0, "other_inc": 61610.0, "cscd_inc": 358414.0, "uc_inc": 142242.53, "sso_inc": 6011.55}, "ทันตกรรม": {"income": 447770.15, "persons": 739.0, "other_inc": 72417.76, "cscd_inc": 139185.0, "uc_inc": 200999.74, "sso_inc": 35167.65}, "แผนไทย": {"income": 209390.82, "persons": 1159.0, "other_inc": 65472.36, "cscd_inc": 97079.0, "uc_inc": 40605.26, "sso_inc": 6234.2}, "เวชฯ": {"income": 202363.05, "persons": 1140.0, "other_inc": 137520.04, "cscd_inc": 11809.0, "uc_inc": 51920.76, "sso_inc": 1113.25}, "สุขภาพจิต": {"income": 95855.74, "persons": 375.0, "other_inc": 18086.24, "cscd_inc": 4665.0, "uc_inc": 72881.85, "sso_inc": 222.65}}, "4": {"OPD": {"income": 1162662.06, "persons": 2691.0, "other_inc": 75152.8, "cscd_inc": 134793.0, "uc_inc": 927948.41, "sso_inc": 24767.85}, "ER": {"income": 800796.38, "persons": 2231.0, "other_inc": 198069.18, "cscd_inc": 34564.1, "uc_inc": 554929.4, "sso_inc": 13233.7}, "กายภาพ": {"income": 485451.68, "persons": 431.0, "other_inc": 93680.0, "cscd_inc": 305827.0, "uc_inc": 83272.88, "sso_inc": 2671.8}, "ทันตกรรม": {"income": 442157.24, "persons": 732.0, "other_inc": 67950.02, "cscd_inc": 137277.0, "uc_inc": 195357.72, "sso_inc": 41572.5}, "แผนไทย": {"income": 192575.1, "persons": 1164.0, "other_inc": 54945.51, "cscd_inc": 89863.0, "uc_inc": 42422.99, "sso_inc": 5343.6}, "เวชฯ": {"income": 170719.95, "persons": 1271.0, "cscd_inc": 3159.0, "uc_inc": 44487.59, "sso_inc": 667.95, "other_inc": 122405.41}, "สุขภาพจิต": {"income": 106795.67, "persons": 460.0, "cscd_inc": 3511.5, "uc_inc": 80392.33, "sso_inc": 222.65, "other_inc": 22669.19}}, "5": {"OPD": {"income": 1292512.7, "persons": 2998.0, "other_inc": 79169.46, "cscd_inc": 166245.35, "uc_inc": 1013495.81, "sso_inc": 33602.08}, "ER": {"income": 899059.59, "persons": 2653.0, "other_inc": 237176.63, "cscd_inc": 39437.85, "uc_inc": 597063.01, "sso_inc": 25382.1}, "กายภาพ": {"income": 569542.5, "persons": 509.0, "other_inc": 116402.0, "cscd_inc": 345195.0, "uc_inc": 104605.75, "sso_inc": 3339.75}, "ทันตกรรม": {"income": 529708.69, "persons": 834.0, "other_inc": 85311.89, "cscd_inc": 189708.5, "uc_inc": 240618.15, "sso_inc": 14070.15}, "แผนไทย": {"income": 191883.43, "persons": 634.0, "other_inc": 50203.29, "cscd_inc": 96852.75, "uc_inc": 40819.69, "sso_inc": 4007.7}, "เวชฯ": {"income": 167424.08, "persons": 1013.0, "cscd_inc": 970.0, "uc_inc": 45015.35, "sso_inc": 222.65, "other_inc": 121216.08}, "สุขภาพจิต": {"income": 134708.35, "persons": 529.0, "other_inc": 22929.86, "cscd_inc": 4056.0, "uc_inc": 107277.19, "sso_inc": 445.3}, "LAB": {"income": 372372.96, "persons": 1912.0, "other_inc": 372372.96}}, "6": {"OPD": {"income": 1122578.75, "persons": 2618.0, "other_inc": 90540.76, "cscd_inc": 178242.9, "uc_inc": 815652.48, "sso_inc": 38142.61}, "ER": {"income": 815473.78, "persons": 2415.0, "other_inc": 205871.2, "cscd_inc": 40517.5, "uc_inc": 534148.4, "sso_inc": 34936.68}, "กายภาพ": {"income": 451379.33, "persons": 419.0, "other_inc": 29850.0, "cscd_inc": 328023.5, "uc_inc": 88056.99, "sso_inc": 5448.84}, "ทันตกรรม": {"income": 541477.07, "persons": 883.0, "other_inc": 69230.0, "cscd_inc": 189681.0, "uc_inc": 261359.01, "sso_inc": 21207.06}, "แผนไทย": {"income": 157262.02, "persons": 549.0, "other_inc": 45831.14, "cscd_inc": 70154.0, "uc_inc": 35507.52, "sso_inc": 5769.36}, "เวชฯ": {"income": 148941.48, "persons": 915.0, "cscd_inc": 14791.0, "uc_inc": 41577.4, "sso_inc": 1282.08, "other_inc": 91291.0}, "สุขภาพจิต": {"income": 121449.41, "persons": 484.0, "other_inc": 20936.88, "cscd_inc": 2980.0, "uc_inc": 95929.93, "sso_inc": 1602.6}, "LAB": {"income": 229306.69, "persons": 1306.0, "other_inc": 229306.69}}, "7": {"OPD": {"income": 1134956.95, "persons": 2654.0, "other_inc": 82689.79, "cscd_inc": 195419.4, "uc_inc": 808769.76, "sso_inc": 48078.0}, "ER": {"income": 792802.45, "persons": 2454.0, "other_inc": 201686.22, "cscd_inc": 38799.05, "uc_inc": 524430.48, "sso_inc": 27886.7}, "กายภาพ": {"income": 536534.54, "persons": 510.0, "other_inc": 53220.0, "cscd_inc": 373446.5, "uc_inc": 102495.08, "sso_inc": 7372.96}, "ทันตกรรม": {"income": 625611.05, "persons": 942.0, "other_inc": 120585.12, "cscd_inc": 214846.0, "uc_inc": 266618.89, "sso_inc": 23561.04}, "แผนไทย": {"income": 183622.94, "persons": 593.0, "other_inc": 44560.61, "cscd_inc": 97327.0, "uc_inc": 34363.37, "sso_inc": 7371.96}, "เวชฯ": {"income": 211855.37, "persons": 1228.0, "cscd_inc": 19427.0, "uc_inc": 42099.29, "sso_inc": 1282.08, "other_inc": 149047.0}, "สุขภาพจิต": {"income": 102333.92, "persons": 321.0, "cscd_inc": 3367.0, "uc_inc": 90991.8, "sso_inc": 1602.6, "other_inc": 6372.52}, "LAB": {"income": 2299.72, "persons": 15.0, "other_inc": 2299.72}}, "8": {"OPD": {"income": 967491.82, "persons": 2365.0, "other_inc": 65033.27, "cscd_inc": 103041.9, "uc_inc": 757882.36, "sso_inc": 41534.29}, "ER": {"income": 853472.7, "persons": 2610.0, "other_inc": 193103.36, "cscd_inc": 50184.79, "uc_inc": 580696.5, "sso_inc": 29488.05}, "กายภาพ": {"income": 491677.84, "persons": 514.0, "other_inc": 28639.0, "cscd_inc": 336779.5, "uc_inc": 119848.94, "sso_inc": 6410.4}, "ทันตกรรม": {"income": 505779.63, "persons": 829.0, "other_inc": 92970.0, "cscd_inc": 149549.8, "uc_inc": 242604.83, "sso_inc": 20655.0}, "แผนไทย": {"income": 124071.8, "persons": 294.0, "other_inc": 11330.0, "cscd_inc": 76232.0, "uc_inc": 32343.04, "sso_inc": 4166.76}, "เวชฯ": {"income": 194031.06, "persons": 1968.0, "cscd_inc": 3173.85, "uc_inc": 42501.84, "sso_inc": 1923.12, "other_inc": 146432.25}, "สุขภาพจิต": {"income": 91669.07, "persons": 235.0, "other_inc": 1240.0, "cscd_inc": 3712.0, "uc_inc": 83832.39, "sso_inc": 2884.68}, "LAB": {"income": 7280.44, "persons": 35.0, "other_inc": 7280.44}}, "9": {"OPD": {"income": 298761.03, "persons": 2860.0, "other_inc": 126707.72, "cscd_inc": 134035.7, "uc_inc": 10326.23, "sso_inc": 27691.38}, "ER": {"income": 338680.0, "persons": 2820.0, "other_inc": 236450.0, "cscd_inc": 50598.7, "uc_inc": 36220.11, "sso_inc": 15411.19}, "กายภาพ": {"income": 581594.26, "persons": 653.0, "other_inc": 80862.0, "cscd_inc": 494424.0, "uc_inc": 577.5, "sso_inc": 5730.76}, "ทันตกรรม": {"income": 357126.85, "persons": 1004.0, "other_inc": 126194.5, "cscd_inc": 189843.0, "uc_inc": 11471.0, "sso_inc": 29618.35}, "แผนไทย": {"income": 130814.34, "persons": 547.0, "other_inc": 41231.86, "cscd_inc": 85693.75, "uc_inc": 0.0, "sso_inc": 3888.73}, "เวชฯ": {"income": 147038.29, "persons": 1636.0, "cscd_inc": 5075.83, "uc_inc": 290.0, "sso_inc": 409.34, "other_inc": 141263.12}, "สุขภาพจิต": {"income": 8310.21, "persons": 250.0, "other_inc": 2843.0, "cscd_inc": 1430.0, "uc_inc": 1376.5, "sso_inc": 2660.71}, "LAB": {"income": 6622.2, "persons": 49.0, "other_inc": 6622.2}}, "10": {"OPD": {"income": 408280.25, "persons": 2547.0, "other_inc": 112780.1, "uc_inc": 11699.0, "sso_inc": 30678.65, "cscd_inc": 253122.5}, "ER": {"income": 318317.63, "persons": 2416.0, "other_inc": 208996.7, "uc_inc": 40942.74, "sso_inc": 18489.74, "cscd_inc": 49888.45}, "กายภาพ": {"income": 489259.41, "persons": 504.0, "uc_inc": 432.5, "sso_inc": 4707.41, "cscd_inc": 418079.5, "other_inc": 66040.0}, "ทันตกรรม": {"income": 254244.41, "persons": 827.0, "uc_inc": 6790.0, "sso_inc": 13909.67, "cscd_inc": 156839.5, "other_inc": 76705.24}, "แผนไทย": {"income": 87449.44, "persons": 284.0, "sso_inc": 6549.44, "cscd_inc": 70320.0, "other_inc": 10580.0, "uc_inc": 0.0}, "เวชฯ": {"income": 115314.52, "persons": 1143.0, "uc_inc": 150.0, "sso_inc": 1228.02, "cscd_inc": 13169.5, "other_inc": 100767.0}, "สุขภาพจิต": {"income": 11532.88, "persons": 213.0, "uc_inc": 3035.5, "sso_inc": 2865.38, "cscd_inc": 3852.0, "other_inc": 1780.0}}, "11": {"OPD": {"income": 286508.25, "persons": 2546.0, "uc_inc": 20826.38, "sso_inc": 31701.98, "cscd_inc": 180122.65, "other_inc": 53857.24}, "ER": {"income": 356988.31, "persons": 2234.0, "other_inc": 262406.38, "uc_inc": 40989.88, "sso_inc": 15281.8, "cscd_inc": 38310.25}, "กายภาพ": {"income": 508012.23, "persons": 555.0, "sso_inc": 3888.73, "cscd_inc": 474743.5, "other_inc": 29380.0, "uc_inc": 0.0}, "ทันตกรรม": {"income": 328951.68, "persons": 910.0, "uc_inc": 11920.0, "sso_inc": 22338.68, "cscd_inc": 207760.0, "other_inc": 86933.0}, "แผนไทย": {"income": 124890.01, "persons": 505.0, "uc_inc": 25.0, "sso_inc": 6344.77, "cscd_inc": 92662.0, "other_inc": 25858.24}, "เวชฯ": {"income": 258557.52, "persons": 2190.0, "uc_inc": 3050.0, "sso_inc": 1228.02, "cscd_inc": 7013.5, "other_inc": 247266.0}, "สุขภาพจิต": {"income": 7808.03, "persons": 202.0, "uc_inc": 2716.0, "sso_inc": 1842.03, "cscd_inc": 1475.0, "other_inc": 1775.0}}}, "2569": {"0": {"OPD": {"income": 321169.87, "persons": 3146.0, "uc_inc": 15979.5, "sso_inc": 48547.57, "cscd_inc": 194636.8, "other_inc": 62006.0}, "ER": {"income": 399839.11, "persons": 3089.0, "uc_inc": 59766.0, "sso_inc": 33119.26, "cscd_inc": 36797.6, "other_inc": 270156.25}, "กายภาพ": {"income": 479733.11, "persons": 602.0, "uc_inc": 567.5, "sso_inc": 4150.65, "cscd_inc": 470264.96, "other_inc": 4750.0}, "ทันตกรรม": {"income": 328960.13, "persons": 1244.0, "uc_inc": 7400.0, "sso_inc": 19312.63, "cscd_inc": 218603.5, "other_inc": 83644.0}, "แผนไทย": {"income": 116414.88, "persons": 436.0, "uc_inc": 25.0, "sso_inc": 7747.88, "cscd_inc": 106892.0, "other_inc": 1750.0}, "เวชฯ": {"income": 172547.76, "persons": 1491.0, "uc_inc": 705.0, "sso_inc": 1660.26, "cscd_inc": 5484.5, "other_inc": 164698.0}, "สุขภาพจิต": {"income": 2918.22, "persons": 182.0, "uc_inc": 471.25, "sso_inc": 1936.97, "cscd_inc": 510.0, "other_inc": 0.0}}, "1": {"OPD": {"income": 290531.85, "persons": 2664.0, "uc_inc": 13093.0, "sso_inc": 41506.5, "cscd_inc": 172278.35, "other_inc": 63654.0}, "ER": {"income": 336752.51, "persons": 2709.0, "uc_inc": 49644.75, "sso_inc": 36646.96, "cscd_inc": 43197.05, "other_inc": 207263.75}, "กายภาพ": {"income": 434868.53, "persons": 570.0, "uc_inc": 435.0, "sso_inc": 4980.78, "cscd_inc": 424982.75, "other_inc": 4470.0}, "ทันตกรรม": {"income": 336180.21, "persons": 1050.0, "uc_inc": 11797.5, "sso_inc": 13796.71, "cscd_inc": 241188.0, "other_inc": 69398.0}, "แผนไทย": {"income": 123773.63, "persons": 452.0, "uc_inc": 95.0, "sso_inc": 9131.43, "cscd_inc": 113477.2, "other_inc": 1070.0}, "เวชฯ": {"income": 170795.71, "persons": 2224.0, "uc_inc": 250.0, "sso_inc": 276.71, "other_inc": 170269.0}, "สุขภาพจิต": {"income": 3098.42, "persons": 149.0, "uc_inc": 0.0, "sso_inc": 553.42, "cscd_inc": 2135.0, "other_inc": 410.0}}, "2": {"OPD": {"income": 561786.66, "persons": 3070.0, "uc_inc": 14053.0, "sso_inc": 52851.61, "cscd_inc": 430736.8, "other_inc": 64145.25}, "ER": {"income": 411253.95, "persons": 2833.0, "other_inc": 277370.76, "uc_inc": 52503.88, "sso_inc": 28348.61, "cscd_inc": 53030.7}, "กายภาพ": {"income": 417718.91, "persons": 529.0, "uc_inc": 155.0, "sso_inc": 5810.91, "cscd_inc": 405383.0, "other_inc": 6370.0}, "ทันตกรรม": {"income": 280117.13, "persons": 920.0, "uc_inc": 9725.0, "sso_inc": 25860.13, "cscd_inc": 187947.0, "other_inc": 56585.0}, "แผนไทย": {"income": 115379.93, "persons": 410.0, "uc_inc": 52.5, "sso_inc": 6364.33, "cscd_inc": 107933.1, "other_inc": 1030.0}, "เวชฯ": {"income": 155104.97, "persons": 1769.0, "uc_inc": 960.13, "sso_inc": 1106.84, "cscd_inc": 10217.0, "other_inc": 142821.0}, "สุขภาพจิต": {"income": 8695.09, "persons": 183.0, "uc_inc": 1728.25, "sso_inc": 1106.84, "cscd_inc": 5678.0, "other_inc": 182.0}}, "3": {"OPD": {"income": 288977.95, "persons": 2732.0, "uc_inc": 18469.75, "sso_inc": 387.0, "cscd_inc": 192409.65, "other_inc": 77711.55}, "ER": {"income": 381250.9, "persons": 2976.0, "uc_inc": 53487.01, "other_inc": 278878.64, "sso_inc": 1780.0, "cscd_inc": 47105.25}, "กายภาพ": {"income": 394630.5, "persons": 505.0, "uc_inc": 0.0, "sso_inc": 0.0, "cscd_inc": 393160.5, "other_inc": 1470.0}, "ทันตกรรม": {"income": 241120.5, "persons": 877.0, "uc_inc": 5041.5, "sso_inc": 26205.0, "cscd_inc": 154906.0, "other_inc": 54968.0}, "แผนไทย": {"income": 121220.0, "persons": 434.0, "uc_inc": 0.0, "sso_inc": 0.0, "cscd_inc": 121020.0, "other_inc": 200.0}, "เวชฯ": {"income": 129960.5, "persons": 1213.0, "uc_inc": 0.0, "sso_inc": 0.0, "cscd_inc": 16571.5, "other_inc": 113389.0}, "สุขภาพจิต": {"income": 1081.13, "persons": 169.0, "uc_inc": 531.13, "sso_inc": 0.0, "cscd_inc": 550.0, "other_inc": 0.0}, "LAB": {"income": 36173.0, "persons": 170.0, "other_inc": 36173.0}}, "4": {"OPD": {"income": 308793.5, "persons": 2863.0, "uc_inc": 12281.75, "sso_inc": 0.0, "cscd_inc": 235499.75, "other_inc": 61012.0}, "ER": {"income": 276339.26, "persons": 2385.0, "other_inc": 193324.38, "uc_inc": 41840.38, "sso_inc": 0.0, "cscd_inc": 41174.5}, "กายภาพ": {"income": 525774.0, "persons": 608.0, "uc_inc": 60.0, "sso_inc": 0.0, "cscd_inc": 523314.0, "other_inc": 2400.0}, "ทันตกรรม": {"income": 263361.5, "persons": 895.0, "uc_inc": 11222.5, "sso_inc": 19925.0, "cscd_inc": 197059.0, "other_inc": 35155.0}, "แผนไทย": {"income": 129970.0, "persons": 438.0, "uc_inc": 0.0, "cscd_inc": 129310.0, "other_inc": 660.0}, "เวชฯ": {"income": 118002.0, "persons": 1136.0, "uc_inc": 120.0, "sso_inc": 0.0, "cscd_inc": 5780.0, "other_inc": 112102.0}, "สุขภาพจิต": {"income": 4142.25, "persons": 163.0, "uc_inc": 712.25, "sso_inc": 0.0, "cscd_inc": 3430.0, "other_inc": 0.0}, "LAB": {"income": 249531.0, "persons": 1993.0, "other_inc": 249531.0}}, "5": {"OPD": {"income": 312165.35, "persons": 2917.0, "uc_inc": 10467.0, "cscd_inc": 200718.35, "sso_inc": 610.0, "other_inc": 100370.0}, "ER": {"income": 315586.61, "persons": 2730.0, "other_inc": 207099.78, "uc_inc": 69120.58, "cscd_inc": 36177.25, "sso_inc": 3189.0}, "กายภาพ": {"income": 484515.0, "persons": 565.0, "uc_inc": 0.0, "cscd_inc": 480815.0, "sso_inc": 0.0, "other_inc": 3700.0}, "ทันตกรรม": {"income": 309089.0, "persons": 1059.0, "uc_inc": 13035.0, "cscd_inc": 172776.5, "sso_inc": 22842.5, "other_inc": 100435.0}, "แผนไทย": {"income": 141748.5, "persons": 464.0, "uc_inc": 0.0, "cscd_inc": 141428.5, "other_inc": 320.0}, "เวชฯ": {"income": 126853.5, "persons": 1078.0, "uc_inc": 200.0, "cscd_inc": 1758.5, "sso_inc": 0.0, "other_inc": 124895.0}, "สุขภาพจิต": {"income": 3757.25, "persons": 198.0, "uc_inc": 800.25, "cscd_inc": 2957.0, "sso_inc": 0.0, "other_inc": 0.0}, "LAB": {"income": 164512.0, "persons": 1433.0, "other_inc": 164512.0}}, "6": {"OPD": {"income": 215354.25, "persons": 2403.0, "uc_inc": 7780.75, "sso_inc": 0.0, "cscd_inc": 166054.5, "other_inc": 41519.0}, "ER": {"income": 304713.01, "persons": 2751.0, "other_inc": 201920.13, "uc_inc": 62888.63, "sso_inc": 0.0, "cscd_inc": 39904.25}, "กายภาพ": {"income": 391050.0, "persons": 541.0, "uc_inc": 0.0, "sso_inc": 0.0, "cscd_inc": 383660.0, "other_inc": 7390.0}, "ทันตกรรม": {"income": 235758.0, "persons": 1110.0, "uc_inc": 10255.0, "sso_inc": 13050.0, "cscd_inc": 162955.0, "other_inc": 49498.0}, "แผนไทย": {"income": 116226.0, "persons": 407.0, "uc_inc": 0.0, "cscd_inc": 115866.0, "other_inc": 360.0}, "เวชฯ": {"income": 120910.0, "persons": 721.0, "uc_inc": 0.0, "sso_inc": 0.0, "cscd_inc": 12720.0, "other_inc": 108190.0}, "สุขภาพจิต": {"income": 2991.75, "persons": 179.0, "uc_inc": 2596.75, "sso_inc": 0.0, "cscd_inc": 395.0, "other_inc": 0.0}, "LAB": {"income": 56519.0, "persons": 484.0, "other_inc": 56519.0}}, "7": {"OPD": {"income": 54497.75, "persons": 2532.0, "other_inc": 48118.0, "uc_inc": 6379.75, "sso_inc": 0.0, "cscd_inc": 0.0}, "ER": {"income": 135506.38, "persons": 2188.0, "other_inc": 119261.63, "uc_inc": 16244.75, "sso_inc": 0.0, "cscd_inc": 0.0}, "กายภาพ": {"income": 7070.0, "persons": 529.0, "uc_inc": 0.0, "sso_inc": 0.0, "cscd_inc": 0.0, "other_inc": 7070.0}, "ทันตกรรม": {"income": 31595.0, "persons": 1098.0, "uc_inc": 6365.0, "sso_inc": 0.0, "cscd_inc": 0.0, "other_inc": 25230.0}, "แผนไทย": {"income": 500.0, "persons": 402.0, "uc_inc": 0.0, "sso_inc": 0.0, "cscd_inc": 0.0, "other_inc": 500.0}, "เวชฯ": {"income": 18922.0, "persons": 170.0, "uc_inc": 240.0, "sso_inc": 0.0, "cscd_inc": 0.0, "other_inc": 18682.0}, "สุขภาพจิต": {"income": 454.63, "persons": 169.0, "uc_inc": 454.63, "sso_inc": 0.0, "cscd_inc": 0.0, "other_inc": 0.0}, "LAB": {"income": 0.0, "persons": 54.0, "other_inc": 0.0}}}} ; ;
+const IP_MONTHLY = {"2567": {"11": {"income": 1970955.74, "persons": 411.0, "uc_inc": 1970955.74}}, "2568": {"0": {"income": 1577273.44, "persons": 394.0, "uc_inc": 1491731.68, "sso_inc": 16454.4, "cscd_inc": 15609.55, "other_inc": 53477.81}, "1": {"income": 1239914.33, "persons": 324.0, "uc_inc": 1127895.07, "sso_inc": 21730.44, "cscd_inc": 57999.86, "other_inc": 32288.96}, "2": {"income": 2008995.47, "persons": 431.0, "uc_inc": 1851636.78, "sso_inc": 23199.48, "cscd_inc": 68938.79, "other_inc": 65220.42}, "3": {"income": 1514335.68, "persons": 402.0, "uc_inc": 1351659.84, "sso_inc": 36638.8, "cscd_inc": 71545.91, "other_inc": 54491.13}, "4": {"income": 1287607.33, "persons": 357.0, "uc_inc": 1152733.38, "sso_inc": 26423.2, "cscd_inc": 71477.25, "other_inc": 36973.5}, "5": {"income": 2223952.73, "persons": 519.0, "uc_inc": 1994988.69, "sso_inc": 31751.5, "cscd_inc": 80415.84, "other_inc": 116796.7}, "6": {"income": 1504340.83, "persons": 423.0, "uc_inc": 1287305.84, "sso_inc": 32515.42, "cscd_inc": 101338.44, "other_inc": 83181.13}, "7": {"income": 1569101.19, "persons": 415.0, "uc_inc": 1399277.38, "sso_inc": 25579.16, "cscd_inc": 89279.4, "other_inc": 54965.25}, "8": {"income": 1947841.5, "persons": 426.0, "uc_inc": 1774022.7, "sso_inc": 32266.28, "cscd_inc": 107030.81, "other_inc": 34521.71}, "9": {"income": 1082784.41, "persons": 386.0, "uc_inc": 897891.49, "sso_inc": 34757.24, "cscd_inc": 101553.17, "other_inc": 48582.51}, "10": {"income": 456050.34, "persons": 400.0, "uc_inc": 331218.28, "sso_inc": 17962.45, "cscd_inc": 78816.23, "other_inc": 28053.38}, "11": {"income": 1087462.47, "persons": 401.0, "uc_inc": 941441.49, "sso_inc": 47383.63, "cscd_inc": 86506.18, "other_inc": 12131.17}}, "2569": {"0": {"income": 1017839.31, "persons": 360.0, "uc_inc": 914744.36, "sso_inc": 37562.27, "cscd_inc": 26460.93, "other_inc": 39071.75}, "1": {"income": 1048363.7, "persons": 378.0, "uc_inc": 873368.61, "sso_inc": 29471.13, "cscd_inc": 114278.32, "other_inc": 31245.64}, "2": {"income": 1531753.94, "persons": 422.0, "uc_inc": 1350048.98, "sso_inc": 8662.74, "cscd_inc": 109862.97, "other_inc": 63179.25}, "3": {"income": 971829.62, "persons": 393.0, "uc_inc": 893351.04, "sso_inc": 0.0, "cscd_inc": 51990.83, "other_inc": 26487.75}, "4": {"income": 808503.55, "persons": 337.0, "uc_inc": 713606.67, "sso_inc": 0.0, "cscd_inc": 29838.94, "other_inc": 65057.94}, "5": {"income": 1229633.88, "persons": 415.0, "uc_inc": 1200228.71, "sso_inc": 0.0, "cscd_inc": 7044.17, "other_inc": 22361.0}, "6": {"income": 491260.83, "persons": 395.0, "uc_inc": 473497.33, "sso_inc": 0.0, "cscd_inc": 0.0, "other_inc": 17763.5}, "7": {"income": 20875.0, "persons": 366.0, "uc_inc": 0.0, "sso_inc": 0.0, "cscd_inc": 0.0, "other_inc": 20875.0}}};
+const OP_ANNUAL  = {"2567": {"OPD": {"income": 0.0, "persons": 0.0, "cscd": 0.0, "uc": 0.0, "sso": 0.0, "other": 0.0}, "ER": {"income": 695751.56, "persons": 1895.0, "cscd": 91723.5, "uc": 577630.68, "sso": 21801.63, "other": 4595.75}, "กายภาพ": {"income": 0.0, "persons": 0.0, "cscd": 0.0, "uc": 0.0, "sso": 0.0, "other": 0.0}, "ทันตกรรม": {"income": 0.0, "persons": 0.0, "cscd": 0.0, "uc": 0.0, "sso": 0.0, "other": 0.0}, "แผนไทย": {"income": 54398.68, "persons": 788.0, "cscd": 0.0, "uc": 0.0, "sso": 0.0, "other": 54398.68}, "เวชฯ": {"income": 44566.0, "persons": 739.0, "cscd": 0.0, "uc": 0.0, "sso": 0.0, "other": 44566.0}, "สุขภาพจิต": {"income": 20731.41, "persons": 252.0, "cscd": 0.0, "uc": 0.0, "sso": 0.0, "other": 20731.41}, "LAB": {"income": 0.0, "persons": 0.0, "cscd": 0.0, "uc": 0.0, "sso": 0.0, "other": 0.0}}, "2568": {"OPD": {"income": 11341674.69, "persons": 32240.0, "cscd": 1917141.6, "uc": 8096340.28, "sso": 373679.19, "other": 954513.62}, "ER": {"income": 8105119.5, "persons": 28103.0, "cscd": 510871.64, "uc": 4661556.31, "sso": 229864.36, "other": 2702827.19}, "กายภาพ": {"income": 6599293.6, "persons": 6530.0, "cscd": 4655539.0, "uc": 1076916.28, "sso": 58245.32, "other": 808593.0}, "ทันตกรรม": {"income": 5613065.58, "persons": 10102.0, "cscd": 2023518.8, "uc": 2176896.38, "sso": 279994.96, "other": 1132655.44}, "แผนไทย": {"income": 2029951.87, "persons": 9340.0, "cscd": 1079655.25, "uc": 354435.12, "sso": 61339.92, "other": 534521.58}, "เวชฯ": {"income": 2122973.87, "persons": 15635.0, "cscd": 92346.43, "uc": 397507.34, "sso": 10689.47, "other": 1622430.63}, "สุขภาพจิต": {"income": 942388.25, "persons": 4079.0, "cscd": 36315.5, "uc": 747643.54, "sso": 15348.32, "other": 143080.89}, "LAB": {"income": 617882.01, "persons": 3317.0, "cscd": 0.0, "uc": 0.0, "sso": 0.0, "other": 617882.01}}, "2569": {"OPD": {"income": 2353277.18, "persons": 22327.0, "cscd": 1592334.2, "uc": 98504.5, "sso": 143902.68, "other": 518535.8}, "ER": {"income": 2561241.73, "persons": 21661.0, "cscd": 297386.6, "uc": 405495.98, "sso": 103083.83, "other": 1755275.32}, "กายภาพ": {"income": 3135360.05, "persons": 4449.0, "cscd": 3081580.21, "uc": 1217.5, "sso": 14942.34, "other": 37620.0}, "ทันตกรรม": {"income": 2026181.47, "persons": 8253.0, "cscd": 1335435.0, "uc": 74841.5, "sso": 140991.97, "other": 474913.0}, "แผนไทย": {"income": 865232.94, "persons": 3443.0, "cscd": 835926.8, "uc": 172.5, "sso": 23243.64, "other": 5890.0}, "เวชฯ": {"income": 1013096.44, "persons": 9802.0, "cscd": 52531.5, "uc": 2475.13, "sso": 3043.81, "other": 955046.0}, "สุขภาพจิต": {"income": 27138.74, "persons": 1392.0, "cscd": 15655.0, "uc": 7294.51, "sso": 3597.23, "other": 592.0}, "LAB": {"income": 506735.0, "persons": 4134.0, "cscd": 0.0, "uc": 0.0, "sso": 0.0, "other": 506735.0}}} ;
+const IP_ANNUAL = {"2567": {"income": 1970955.74, "persons": 411.0, "cscd": 0.0, "uc": 1970955.74, "sso": 0.0, "other": 0.0}, "2568": {"income": 17499659.72, "persons": 4878.0, "cscd": 930511.43, "uc": 15601802.62, "sso": 346662.0, "other": 620683.67}, "2569": {"income": 7120059.83, "persons": 3066.0, "cscd": 339476.16, "uc": 6418845.7, "sso": 75696.14, "other": 286041.83}};
+
+const DEPT_LIST = ['IPD','OPD','ER','กายภาพ','ทันตกรรม','แผนไทย','เวชฯ','สุขภาพจิต','LAB'];
+const DEPT_COLORS = ['#1A6B5A','#3A7BE0','#E07B3A','#0D9488','#EC4899','#F59E0B','#8B5CF6','#E05555','#6B7280'];
+const MONTHS_TH = ['ต.ค.','พ.ย.','ธ.ค.','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.'];
+
+let p2Ready = false;
+
+function getMonthlyArr(data, fy, dept, key) {
+  const fyStr = String(fy);
+  return Array.from({length:12},(_,m)=> (data[fyStr]?.[String(m)]?.[dept]?.[key])||0);
+}
+function getIPMonthly(fy, key) {
+  const fyStr = String(fy);
+  return Array.from({length:12},(_,m)=> (IP_MONTHLY[fyStr]?.[String(m)]?.[key])||0);
+}
+function getMonthLabels(fy, dept) {
+  const fyStr = String(fy);
+  const months = OP_MONTHLY[fyStr] || {};
+  const ms = Object.keys(months).filter(m => months[m][dept]).map(Number).sort((a,b)=>a-b);
+  return ms.length ? ms.map(m=>MONTHS_TH[m]) : MONTHS_TH;
+}
+
+function renderP2() {
+  p2Ready = true;
+  const fy68 = '2568'; const fy67 = '2567'; const fy69 = '2569';
+
+  // 1. ภาพรวมแยกหน่วยงาน
+  const ip68 = IP_ANNUAL['2568'], ip67 = IP_ANNUAL['2567'], ip69 = IP_ANNUAL['2569'];
+  const opd68 = OP_ANNUAL['2568'], opd67 = OP_ANNUAL['2567'], opd69 = OP_ANNUAL['2569'];
+
+  // KPI Cards — ปี 2569 เป็นหลัก เปรียบเทียบกับ 68
+  const sumOP69 = Object.values(opd69||{}).reduce((s,d)=>s+(d.income||0),0);
+  const sumOP68 = Object.values(opd68||{}).reduce((s,d)=>s+(d.income||0),0);
+  const grand69 = (ip69?.income||0) + sumOP69;
+  const grand68 = (ip68?.income||0) + sumOP68;
+
+  const gTxt = (a,b) => { if(!a||a===0)return'—'; const g=((b-a)/a*100).toFixed(1); return +g>=0?`▲ +${g}%`:`▼ ${g}%`; };
+  const n69mon = Object.keys(IP_MONTHLY['2569']||{}).length;
+
+  const kpis = [
+    {lbl:'รายได้รวมทุกหน่วย ปี 69',  val:fmtM(grand69),                              sub:gTxt(grand68,grand69)+' vs ปี 68',                         cls:'gr', pos:grand69>=grand68},
+    {lbl:'รายได้ IPD ปี 69',           val:fmtM(ip69?.income||0),                     sub:gTxt(ip68?.income,ip69?.income)+' vs ปี 68',               cls:'bl', pos:(ip69?.income||0)>=(ip68?.income||0)},
+    {lbl:'รายได้ OPD ปี 69',           val:fmtM(opd69?.OPD?.income||0),               sub:gTxt(opd68?.OPD?.income,opd69?.OPD?.income)+' vs ปี 68',   cls:'bl', pos:(opd69?.OPD?.income||0)>=(opd68?.OPD?.income||0)},
+    {lbl:'รายได้ ทันตกรรม ปี 69',      val:fmtM(opd69?.ทันตกรรม?.income||0),         sub:gTxt(opd68?.ทันตกรรม?.income,opd69?.ทันตกรรม?.income)+' vs ปี 68', cls:'pu', pos:(opd69?.ทันตกรรม?.income||0)>=(opd68?.ทันตกรรม?.income||0)},
+    {lbl:'รายได้ กายภาพ ปี 69',        val:fmtM(opd69?.กายภาพ?.income||0),           sub:gTxt(opd68?.กายภาพ?.income,opd69?.กายภาพ?.income)+' vs ปี 68',   cls:'tl', pos:(opd69?.กายภาพ?.income||0)>=(opd68?.กายภาพ?.income||0)},
+    {lbl:'รายได้ แผนไทย ปี 69',        val:fmtM(opd69?.แผนไทย?.income||0),           sub:gTxt(opd68?.แผนไทย?.income,opd69?.แผนไทย?.income)+' vs ปี 68',   cls:'or', pos:(opd69?.แผนไทย?.income||0)>=(opd68?.แผนไทย?.income||0)},
+    {lbl:'รายได้ ER ปี 69',             val:fmtM(opd69?.ER?.income||0),               sub:gTxt(opd68?.ER?.income,opd69?.ER?.income)+' vs ปี 68',     cls:'or', pos:(opd69?.ER?.income||0)>=(opd68?.ER?.income||0)},
+    {lbl:'จำนวน IP (คน) ปี 69',        val:(ip69?.persons||0).toLocaleString('th-TH'), sub:gTxt(ip68?.persons,ip69?.persons)+' vs ปี 68',            cls:'gr', pos:(ip69?.persons||0)>=(ip68?.persons||0)},
+    {lbl:'Visit OPD ปี 69',            val:(opd69?.OPD?.persons||0).toLocaleString('th-TH'),         sub:gTxt(opd68?.OPD?.persons,opd69?.OPD?.persons)+' vs ปี 68',       cls:'bl', pos:(opd69?.OPD?.persons||0)>=(opd68?.OPD?.persons||0)},
+    {lbl:'Visit ทันตกรรม ปี 69',       val:(opd69?.ทันตกรรม?.persons||0).toLocaleString('th-TH'),   sub:gTxt(opd68?.ทันตกรรม?.persons,opd69?.ทันตกรรม?.persons)+' vs ปี 68', cls:'pu', pos:(opd69?.ทันตกรรม?.persons||0)>=(opd68?.ทันตกรรม?.persons||0)},
+    {lbl:'Visit กายภาพ ปี 69',         val:(opd69?.กายภาพ?.persons||0).toLocaleString('th-TH'),     sub:gTxt(opd68?.กายภาพ?.persons,opd69?.กายภาพ?.persons)+' vs ปี 68',   cls:'tl', pos:(opd69?.กายภาพ?.persons||0)>=(opd68?.กายภาพ?.persons||0)},
+    {lbl:'Visit แผนไทย ปี 69',         val:(opd69?.แผนไทย?.persons||0).toLocaleString('th-TH'),     sub:gTxt(opd68?.แผนไทย?.persons,opd69?.แผนไทย?.persons)+' vs ปี 68',   cls:'or', pos:(opd69?.แผนไทย?.persons||0)>=(opd68?.แผนไทย?.persons||0)},
+  ];
+  const clrMap = {gr:'#1A6B5A',bl:'#3A7BE0',pu:'#8B5CF6',tl:'#0D9488',or:'#E07B3A',re:'#E05555'};
+  document.getElementById('kpi-p2').innerHTML = kpis.map(c=>`
+    <div class="kpi" style="border-bottom:3px solid ${clrMap[c.cls]||'#ccc'}">
+      <div class="kpi-lbl">${c.lbl}</div>
+      <div class="kpi-val ${c.pos===true?'pos':c.pos===false?'neg':''}">${c.val}</div>
+      <div class="kpi-sub" style="color:${c.pos===true?'#1A6B5A':c.pos===false?'#E05555':'var(--sub)'}">${c.sub}</div>
+    </div>`).join('');
+
+  // 2. IPD - แสดง 68 และ 69 รายเดือน
+  const ip68mn = getIPMonthly(2568,'income');
+  const ip69mn = getIPMonthly(2569,'income');
+  const ip69lbl = Array.from({length:8},(_,m)=>MONTHS_TH[m]); // ปี 69 มี 8 เดือน
+  mkChart('p2-ip-monthly','line',MONTHS_TH,[
+    lds('ปี 2568',ip68mn,CLR.gr),
+    lds('ปี 2569',ip69mn.slice(0,8).concat(Array(4).fill(null)),CLR.bl,true),
+  ]);
+  mkChart('p2-ip-right','doughnut',['UC','ข้าราชการ','ปกส.','อื่นๆ'],[{
+    data:[ip68.uc,ip68.cscd,ip68.sso,ip68.other],
+    backgroundColor:[CLR.gr+'CC',CLR.bl+'CC',CLR.or+'CC',CLR.pu+'CC'], borderWidth:2
+  }]);
+  mkChart('p2-ip-persons','line',MONTHS_TH,[
+    lds('ปี 2568',getIPMonthly(2568,'persons'),CLR.gr),
+    lds('ปี 2569',getIPMonthly(2569,'persons').slice(0,8).concat(Array(4).fill(null)),CLR.bl,true),
+  ]);
+  mkChart('p2-ip-yr','bar',['ปี 2567','ปี 2568','ปี 2569'],[
+    bds('รายได้ IP',[IP_ANNUAL['2567'].income,IP_ANNUAL['2568'].income,IP_ANNUAL['2569'].income],CLR.gr)
+  ]);
+
+  // helper render dept section — แสดง 68 vs 69 รายเดือน
+  function renderDept(dept, color, idPfx) {
+    const m68 = Array.from({length:12},(_,m)=>(OP_MONTHLY['2568']?.[String(m)]?.[dept]?.income)||0);
+    // ปี 69: เอาทุกเดือนที่มีข้อมูล (income หรือ persons > 0) แล้วต่อ null
+    const m69raw = Array.from({length:12},(_,m)=>{
+      const r = OP_MONTHLY['2569']?.[String(m)]?.[dept];
+      return (r?.income||0) + (r?.persons||0) > 0 ? (r?.income||0) : null;
+    });
+    // ตัด null ท้ายออก แต่เก็บ null กลาง (เดือนที่มีข้อมูล persons แต่ income=0)
+    const lastHasData = m69raw.reduce((acc,v,i)=>v!==null?i:acc,-1);
+    const m69 = m69raw.map((v,i)=> i<=lastHasData ? (v!==null?v:0) : null);
+
+    mkChart(idPfx+'-monthly','line',MONTHS_TH,[
+      lds('ปี 2568',m68,color),
+      lds('ปี 2569',m69,CLR.bl,true),
+    ]);
+    const ann68 = OP_ANNUAL['2568'][dept]||{uc:0,cscd:0,sso:0,other:0};
+    const ann69 = OP_ANNUAL['2569'][dept]||{uc:0,cscd:0,sso:0,other:0};
+    mkChart(idPfx+'-right','doughnut',['UC (68)','ข้าราชการ (68)','ปกส. (68)','อื่นๆ (68)'],[{
+      data:[ann68.uc,ann68.cscd,ann68.sso,ann68.other],
+      backgroundColor:[CLR.gr+'CC',CLR.bl+'CC',CLR.or+'CC',CLR.pu+'CC'], borderWidth:2
+    }]);
+    mkChart(idPfx+'-persons','line',MONTHS_TH,[
+      lds('Visit ปี 2568',Array.from({length:12},(_,m)=>(OP_MONTHLY['2568']?.[String(m)]?.[dept]?.persons)||0),color),
+      lds('Visit ปี 2569',Array.from({length:12},(_,m)=> m<=lastHasData ? (OP_MONTHLY['2569']?.[String(m)]?.[dept]?.persons||0) : null),CLR.bl,true),
+    ]);
+    const a67 = OP_ANNUAL['2567'][dept]?.income||0;
+    const a68 = OP_ANNUAL['2568'][dept]?.income||0;
+    const a69 = OP_ANNUAL['2569'][dept]?.income||0;
+    mkChart(idPfx+'-yr','bar',['ปี 2567','ปี 2568','ปี 2569*'],[bds('รายได้',[a67,a68,a69],color)]);
+  }
+
+  renderDept('OPD', CLR.bl, 'p2-opd');
+  renderDept('ทันตกรรม', CLR.pk, 'p2-dent');
+  renderDept('กายภาพ', CLR.tl, 'p2-pt');
+  renderDept('แผนไทย', CLR.am, 'p2-thai');
+
+  // 7. ER, เวชฯ, สุขภาพจิต, LAB — แสดง 68 vs 69
+  const depts7 = [['ER',CLR.or,'p2-er'],['เวชฯ',CLR.pu,'p2-med'],['สุขภาพจิต',CLR.re,'p2-mental'],['LAB','#6B7280','p2-lab']];
+  depts7.forEach(([dept,color,id])=>{
+    const m68d = Array.from({length:12},(_,m)=>(OP_MONTHLY['2568']?.[String(m)]?.[dept]?.income)||0);
+    const m69raw = Array.from({length:12},(_,m)=>{
+      const r = OP_MONTHLY['2569']?.[String(m)]?.[dept];
+      return (r?.income||0)+(r?.persons||0)>0 ? (r?.income||0) : null;
+    });
+    const lastM = m69raw.reduce((acc,v,i)=>v!==null?i:acc,-1);
+    const m69d = m69raw.map((v,i)=>i<=lastM?(v!==null?v:0):null);
+    mkChart(id+'-monthly','line',MONTHS_TH,[
+      lds('ปี 2568',m68d,color),
+      lds('ปี 2569',m69d,CLR.bl,true),
+    ]);
+  });
+
+  // ภาพรวม dept bar — เพิ่ม 69
+  const deptNames = ['IPD','OPD','ER','กายภาพ','ทันตกรรม','แผนไทย','เวชฯ','สุขภาพจิต','LAB'];
+  const deptInc68 = [
+    ip68.income, opd68.OPD.income, opd68.ER.income, opd68.กายภาพ.income,
+    opd68.ทันตกรรม.income, opd68.แผนไทย.income, opd68.เวชฯ.income,
+    opd68.สุขภาพจิต.income, opd68.LAB.income
+  ];
+  const deptInc69 = [
+    ip69.income, opd69.OPD.income, opd69.ER.income, opd69.กายภาพ.income,
+    opd69.ทันตกรรม.income, opd69.แผนไทย.income, opd69.เวชฯ.income,
+    opd69.สุขภาพจิต.income, opd69.LAB.income
+  ];
+  mkChart('p2-dept-bar','bar',deptNames,[
+    bds('ปี 2568',deptInc68,CLR.gr),
+    bds('ปี 2569*',deptInc69,CLR.bl),
+  ]);
+  mkChart('p2-dept-pie','doughnut',deptNames,[{
+    data:deptInc68, backgroundColor:DEPT_COLORS.map(c=>c+'CC'), borderWidth:2
+  }]);
+
+  // 8. Table — เพิ่ม grow 68→69
+  const allDepts = ['IPD','OPD','ER','กายภาพ','ทันตกรรม','แผนไทย','เวชฯ','สุขภาพจิต','LAB'];
+  const getAnn = (dept,fy) => {
+    if (dept==='IPD') return IP_ANNUAL[String(fy)]||{income:0,uc:0,cscd:0,sso:0,other:0};
+    return OP_ANNUAL[String(fy)]?.[dept]||{income:0,uc:0,cscd:0,sso:0,other:0};
+  };
+  document.getElementById('tbl-prod-body').innerHTML = allDepts.map(dept=>{
+    const a67=getAnn(dept,2567); const a68=getAnn(dept,2568); const a69=getAnn(dept,2569);
+    const grow6768 = a67.income>0 ? (((a68.income-a67.income)/a67.income)*100).toFixed(1) : '—';
+    const grow6869 = a68.income>0 ? (((a69.income-a68.income)/a68.income)*100).toFixed(1) : '—';
+    const cls68 = grow6768!=='—' && +grow6768>=0 ? 'tdp' : 'tdn';
+    const cls69 = grow6869!=='—' && +grow6869>=0 ? 'tdp' : 'tdn';
+    const txt68 = grow6768!=='—' ? (grow6768>=0?'+':'')+grow6768+'%' : '—';
+    const txt69 = grow6869!=='—' ? (grow6869>=0?'+':'')+grow6869+'% *' : '—';
+    return `<tr>
+      <td><b>${dept}</b></td>
+      <td class="num">${fmtM(a67.income)}</td>
+      <td class="num">${fmtM(a68.income)}</td>
+      <td class="num">${fmtM(a69.income)}</td>
+      <td class="num ${cls68}">${txt68}</td>
+      <td class="num ${cls69}">${txt69}</td>
+      <td class="num">${fmtM(a68.uc)}</td>
+      <td class="num">${fmtM(a68.cscd)}</td>
+      <td class="num">${fmtM(a68.sso)}</td>
+      <td class="num">${fmtM(a68.other)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportProdTable() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(document.getElementById('tbl-prod'));
+  XLSX.utils.book_append_sheet(wb,ws,'Productivity');
+  XLSX.writeFile(wb,'Productivity_2568.xlsx');
+}
+
+// ============ INIT ============
+renderAll();
+</script>
+</body>
+</html>
